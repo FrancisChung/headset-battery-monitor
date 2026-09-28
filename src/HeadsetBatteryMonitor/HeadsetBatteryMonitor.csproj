@@ -5,6 +5,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <AssemblyName>HeadsetBatteryMonitor</AssemblyName>
+    <Version>0.1.0</Version>
     <ApplicationIcon>../../Icons/headphone.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
