@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AssemblyName>HeadsetBatteryMonitor</AssemblyName>
+    <ApplicationIcon>../../Icons/headphone.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="../../Icons/headphone.png" LogicalName="HeadsetBatteryMonitor.Icons.headphone.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../HeadsetBatteryMonitor.Backends/HeadsetBatteryMonitor.Backends.csproj" />
+    <ProjectReference Include="../HeadsetBatteryMonitor.Core/HeadsetBatteryMonitor.Core.csproj" />
+  </ItemGroup>
+</Project>

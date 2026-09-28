@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageReference Include="NUnit" Version="4.4.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/HeadsetBatteryMonitor.Backends/HeadsetBatteryMonitor.Backends.csproj" />
+    <ProjectReference Include="../../src/HeadsetBatteryMonitor.Core/HeadsetBatteryMonitor.Core.csproj" />
+  </ItemGroup>
+</Project>
