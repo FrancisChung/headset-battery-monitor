@@ -25,7 +25,9 @@ Windows 10 is the requested runtime target. Microsoft's support statement for mo
 
 **UI:** C# WinForms, `net10.0-windows`, `NotifyIcon` and context menu; no main window required. Publish self-contained for `win-x64` once it works on the target machine. If .NET 10 fails on the owner's Windows 10 build, choose a compatible runtime after a real compatibility test and document that decision.
 
-**Backend:** Bundle a pinned Windows x64 `headsetcontrol.exe` in the application directory, or configure a user-selected local path during development. Execute the documented JSON command `headsetcontrol -o json` via `ProcessStartInfo.ArgumentList`, parse `devices[]`, and filter to the explicitly supported Cloud II Wireless and G933 identities. Confirm on the pinned executable whether `-o json` retrieves battery automatically; if necessary use the documented `-b -o json` and make the choice explicit in one adapter. Do not scrape human-readable CLI text.
+**Backend:** Bundle a pinned, tested Windows x64 `headsetcontrol.exe` beside the tray executable. Allow an advanced user-selected path for development and compatibility testing, but prefer the bundled executable in normal use. Execute the documented JSON command `headsetcontrol -o json` via `ProcessStartInfo.ArgumentList`, parse `devices[]`, validate the reported API major version, and filter to the explicitly supported Cloud II Wireless and G933 identities. Confirm on the pinned executable whether `-o json` retrieves battery automatically; if necessary use the documented `-b -o json` and make the choice explicit in one adapter. Do not scrape human-readable CLI text.
+
+Display the detected HeadsetControl application and API versions in diagnostics. A newer backend can be tested or substituted without rebuilding the tray application when its JSON API remains compatible, but releases must continue to pin and test an exact version. Report incompatible output clearly and never silently reinterpret it. Do not implement automatic backend downloads or replacement in V1. When distributing HeadsetControl, include its GPLv3 license, attribution, corresponding-source information and any other required notices; obtain licensing advice for the intended distribution model.
 
 **Polling:** On startup and every 30 minutes, run one backend query off the UI thread. No overlapping runs; set a reasonable timeout (for example 5 seconds), kill a hung child process, then retry at the next interval. Refresh immediately when the user selects **Refresh**; periodic polling is the fallback for plug/unplug and power changes. Redirection of stdout/stderr must avoid deadlock; never show a blocking error dialog from the poll loop.
 
@@ -57,16 +59,14 @@ public sealed class HeadsetControlCliSource : IHeadsetBatterySource { /* JSON ad
 Use a small coordinator to schedule polls, reconcile the current set of supported devices and publish immutable snapshots to the WinForms UI thread. Device filtering belongs in the adapter/coordinator, not in the tray rendering code. The later RIG driver should be added upstream to HeadsetControl if practical; it can then flow through this adapter. If upstream integration is blocked, a separate `Rig800HdSource` can implement the same interface and its snapshots can be merged by the coordinator.
 
 ## 4. User experience
-- One persistent tray icon with a headset icon. When user hovers over it, it should display the same info as Right Click Menu in a Tooltip text. Set tooltip text to include the headset name and state. Respect Windows tooltip length limits.
-- The Colour of the headset icon should reflect the battery range values
-  - e.g. Green could be 50-100%, Yellow between 20%-49% and Red between 0-19%
+- One persistent tray icon represents the selected headset. When a current battery level is available, show a colour-coded percentage. Otherwise show a headset/status icon: grey `?` for off, disconnected or unavailable, and orange `!` for an error. If charging is reported, add a charging indicator where it remains legible.
+- Default colour thresholds are green above 50%, yellow from 21–50%, and red at or below 20%. Store these as two ordered thresholds rather than three independent ranges: `0 <= critical < warning <= 100`. The settings UI labels them **Critical at or below** and **Warning at or below**.
+- The tooltip contains the device-status rows from the right-click menu, not command items such as Refresh or Exit. Include headset names and states, and truncate safely to the Windows tooltip limit.
 - Right-click menu contains **HyperX Cloud II Wireless — 72%**, **Logitech G933 — 45%**, or clear states such as **Headset off**, **Receiver unplugged**, **Reading unavailable**. Clicking a row selects that headset for the tray number; selection persists across restarts.
 - **Refresh**, **Launch at sign-in** (opt-in), **About / diagnostics**, and **Exit** menu actions. Settings live in the user's local application data. Diagnostics show app/backend version, recognized IDs, last poll time, and redacted errors, with a copy button.
 - If both receivers are present, both rows remain visible. If none is present, the icon stays available with `?` and the menu explains why. Restarting Explorer should not permanently strand the app; validate tray icon recreation during manual testing.
-- Low-battery notifications are a follow-up increment: opt-in, threshold 20%, trigger only on a transition from above threshold to at/below it, suppress repeated alerts until charge/recovery. Unknown status never triggers an alert.
-- Settings page: There should be a settings option where the user can modify the following:
-  - Polling interval
-  - Battery Range values for Green, Yellow and Red
+- Low-battery notifications are a follow-up increment: opt-in, use the configurable critical threshold, trigger only on a transition from above the threshold to at/below it, and suppress repeated alerts until charge/recovery. Unknown status never triggers an alert.
+- A **Settings** action opens a small settings window. The user can change the polling interval (default 30 minutes; valid range 1 minute to 24 hours) and the warning/critical thresholds. Validate values before saving, offer reset-to-defaults, persist changes in local application data, and apply them immediately without starting an overlapping poll.
   
 ## 5. Milestones and acceptance criteria
 
@@ -76,11 +76,11 @@ On the owner's Windows 10 PC, install/run a recent HeadsetControl Windows build.
 
 ### M1 — minimum working tray app
 
-Create a C# solution containing the WinForms tray process, JSON adapter and coordinator. Discover and show both devices, use a dynamic numeric icon, switch the selected headset, support manual refresh and exit, and persist selection. Handle process timeout, invalid JSON and unplug events without freezing the UI. **Done when:** both physical headsets can be shown in the menu simultaneously and the icon follows the selected one on the actual Windows 10 machine.
+Create a C# solution containing the WinForms tray process, JSON adapter and coordinator. Discover and show both devices, use the default colour thresholds for a dynamic percentage/status icon, switch the selected headset, support manual refresh and exit, and persist selection. Handle process timeout, invalid JSON and unplug events without freezing the UI. **Done when:** both physical headsets can be shown in the menu simultaneously and the icon follows the selected one on the actual Windows 10 machine.
 
 ### M2 — reliability and distribution
 
-Add opt-in start at sign-in, modest diagnostics, resilient periodic refresh and an x64 self-contained publish. Package the exact tested HeadsetControl binary or clearly document how to install it and where the app expects it. Preserve the dependency's license and source/attribution obligations when distributing. **Done when:** a clean Windows 10 user profile can install/run it, unplug/replug and power transitions are reflected correctly, and it recovers after sign-out/sign-in and Explorer restart.
+Add the validated settings window, opt-in start at sign-in, modest diagnostics, resilient periodic refresh and an x64 self-contained publish. Package the exact tested HeadsetControl binary or clearly document how to install it and where the app expects it. Preserve the dependency's license and source/attribution obligations when distributing. **Done when:** a clean Windows 10 user profile can install/run it, settings persist and take effect, unplug/replug and power transitions are reflected correctly, and it recovers after sign-out/sign-in and Explorer restart.
 
 ### M3 — later Plantronics RIG 800HD research
 
@@ -97,6 +97,9 @@ Unplug and reconnect during a poll | No crash, no stale percentage presented as 
 Backend missing, exits nonzero, emits malformed JSON, or hangs | Clear diagnostic; UI stays responsive; later polling recovers |
 Level reported as 0, -1, null, or >100 | Only valid available 0–100 accepted; other values unavailable |
 Charging with unavailable percentage | Charging shown only if reported; no invented number |
+Levels at 0, critical, critical+1, warning and warning+1 | Correct red/yellow/green boundary colour |
+Invalid thresholds or polling interval | Cannot be saved; existing settings remain active |
+Polling interval changed during an active poll | No overlapping backend process; new interval applies afterward |
 Explorer restart, Windows sign-in, clean user profile | Tray icon returns; opt-in startup behavior preserved |
 Hardware readings compared with vendor utility or known discharge | Plausible and appropriately coarse; document discrepancies |
 
