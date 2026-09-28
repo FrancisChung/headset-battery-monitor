@@ -9,6 +9,7 @@ public sealed record AppSettings
     public int PollingIntervalMinutes { get; init; } = DefaultPollingMinutes;
     public int WarningThreshold { get; init; } = DefaultWarningThreshold;
     public int CriticalThreshold { get; init; } = DefaultCriticalThreshold;
+    public bool StartAtSignIn { get; init; }
     public string? SelectedDeviceKey { get; init; }
     public string? HeadsetControlPath { get; init; }
 

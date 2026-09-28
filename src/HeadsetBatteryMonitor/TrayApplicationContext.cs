@@ -6,6 +6,7 @@ namespace HeadsetBatteryMonitor;
 internal sealed class TrayApplicationContext : ApplicationContext
 {
     private readonly JsonSettingsStore _settingsStore = new();
+    private readonly WindowsAutoStartManager _autoStartManager = new();
     private readonly NotifyIcon _notifyIcon = new();
     private readonly System.Windows.Forms.Timer _timer = new();
     private readonly SemaphoreSlim _pollGate = new(1, 1);
@@ -19,7 +20,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     public TrayApplicationContext()
     {
-        _settings = _settingsStore.Load();
+        _settings = _settingsStore.Load() with { StartAtSignIn = _autoStartManager.IsEnabled() };
         _timer.Tick += async (_, _) => await RefreshAsync();
         ApplyPollingInterval();
         _notifyIcon.Visible = true;
@@ -111,7 +112,22 @@ internal sealed class TrayApplicationContext : ApplicationContext
         using var form = new SettingsForm(_settings);
         if (form.ShowDialog() != DialogResult.OK || form.UpdatedSettings is null)
             return;
-        _settings = form.UpdatedSettings;
+
+        try
+        {
+            _autoStartManager.SetEnabled(form.UpdatedSettings.StartAtSignIn);
+        }
+        catch (Exception exception) when (exception is UnauthorizedAccessException
+            or System.Security.SecurityException
+            or IOException
+            or InvalidOperationException)
+        {
+            MessageBox.Show($"The startup setting could not be changed.{Environment.NewLine}{Environment.NewLine}{exception.Message}",
+                "Headset Battery Monitor", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        _settings = form.UpdatedSettings with { StartAtSignIn = _autoStartManager.IsEnabled() };
         _settingsStore.Save(_settings);
         ApplyPollingInterval();
         UpdatePresentation();
