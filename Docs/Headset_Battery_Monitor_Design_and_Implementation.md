@@ -80,7 +80,7 @@ Create a C# solution containing the WinForms tray process, JSON adapter and coor
 
 ### M2 — reliability and distribution
 
-Add the validated settings window, opt-in start at sign-in, modest diagnostics, resilient periodic refresh and an x64 self-contained publish. Package the exact tested HeadsetControl binary or clearly document how to install it and where the app expects it. Preserve the dependency's license and source/attribution obligations when distributing. **Done when:** a clean Windows 10 user profile can install/run it, settings persist and take effect, unplug/replug and power transitions are reflected correctly, and it recovers after sign-out/sign-in and Explorer restart.
+Add the validated settings window, opt-in start at sign-in, modest diagnostics, resilient periodic refresh and an x64 self-contained publish. Build a per-user Inno Setup installer that requires no elevation and contains the exact tested HeadsetControl binary plus its required licence and corresponding-source information. The packaging build must fail when any required dependency material is absent. **Done when:** a clean Windows 10 user profile can install, upgrade, run and uninstall it; settings persist and take effect; unplug/replug and power transitions are reflected correctly; and it recovers after sign-out/sign-in and Explorer restart.
 
 ### M3 — later Plantronics RIG 800HD research
 
