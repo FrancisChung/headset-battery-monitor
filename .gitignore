@@ -4,3 +4,6 @@
 .git/
 *.user
 *.suo
+artifacts/
+packaging/headsetcontrol/headsetcontrol.exe
+packaging/headsetcontrol/source/
