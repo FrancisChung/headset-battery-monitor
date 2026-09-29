@@ -3,6 +3,7 @@
 **Date:** 28 September 2026  
 **Target:** Windows 10 x64; also test Windows 11 if available  
 **Initial devices:** HyperX Cloud II Wireless (Kingston or HP receiver) and Logitech G933 Artemis Spectrum  
+**Provisional device:** HyperX Cloud III S Wireless (`03f0:06be`), pending upstream HeadsetControl battery support and hardware verification
 **Later device:** Original Plantronics RIG 800HD, subject to protocol research
 
 ## 1. Goal and scope
@@ -25,7 +26,7 @@ Windows 10 is the requested runtime target. Microsoft's support statement for mo
 
 **UI:** C# WinForms, `net10.0-windows`, `NotifyIcon` and context menu; no main window required. Publish self-contained for `win-x64` once it works on the target machine. If .NET 10 fails on the owner's Windows 10 build, choose a compatible runtime after a real compatibility test and document that decision.
 
-**Backend:** Bundle a pinned, tested Windows x64 `headsetcontrol.exe` beside the tray executable. Allow an advanced user-selected path for development and compatibility testing, but prefer the bundled executable in normal use. Execute the documented JSON command `headsetcontrol -o json` via `ProcessStartInfo.ArgumentList`, parse `devices[]`, validate the reported API major version, and filter to the explicitly supported Cloud II Wireless and G933 identities. Confirm on the pinned executable whether `-o json` retrieves battery automatically; if necessary use the documented `-b -o json` and make the choice explicit in one adapter. Do not scrape human-readable CLI text.
+**Backend:** Bundle a pinned, tested Windows x64 `headsetcontrol.exe` beside the tray executable. Allow an advanced user-selected path for development and compatibility testing, but prefer the bundled executable in normal use. Execute the documented JSON command `headsetcontrol -o json` via `ProcessStartInfo.ArgumentList`, parse `devices[]`, validate the reported API major version, and filter to the explicitly supported Cloud II Wireless and G933 identities plus the provisional Cloud III S Wireless identity. Confirm on the pinned executable whether `-o json` retrieves battery automatically; if necessary use the documented `-b -o json` and make the choice explicit in one adapter. Do not scrape human-readable CLI text.
 
 Display the detected HeadsetControl application and API versions in diagnostics. A newer backend can be tested or substituted without rebuilding the tray application when its JSON API remains compatible, but releases must continue to pin and test an exact version. Report incompatible output clearly and never silently reinterpret it. Do not implement automatic backend downloads or replacement in V1. When distributing HeadsetControl, include its GPLv3 license, attribution, corresponding-source information and any other required notices; obtain licensing advice for the intended distribution model.
 

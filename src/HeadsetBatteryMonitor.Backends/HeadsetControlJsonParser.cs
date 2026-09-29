@@ -70,6 +70,7 @@ public sealed class HeadsetControlJsonParser
 
     private static bool IsSupportedModel(string name) =>
         name.Contains("Cloud II Wireless", StringComparison.OrdinalIgnoreCase) ||
+        name.Contains("Cloud III S Wireless", StringComparison.OrdinalIgnoreCase) ||
         name.Contains("G933", StringComparison.OrdinalIgnoreCase);
 
     private static ushort ParseUsbId(string? text)

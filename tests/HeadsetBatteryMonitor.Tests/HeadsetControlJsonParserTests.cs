@@ -33,6 +33,28 @@ public sealed class HeadsetControlJsonParserTests
         });
     }
 
+    [Test]
+    public void Parses_cloud_iii_s_wireless_battery()
+    {
+        const string json = """
+            { "api_version": "1.5", "devices": [
+              { "status": "success", "device": "HyperX Cloud III S Wireless", "id_vendor": "0x03f0", "id_product": "0x06be",
+                "battery": { "status": "BATTERY_AVAILABLE", "level": 64 } }
+            ] }
+            """;
+
+        var snapshot = new HeadsetControlJsonParser().Parse(json, ObservedAt).Devices.Single();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(snapshot.DisplayName, Is.EqualTo("HyperX Cloud III S Wireless"));
+            Assert.That(snapshot.DeviceKey.VendorId, Is.EqualTo(0x03f0));
+            Assert.That(snapshot.DeviceKey.ProductId, Is.EqualTo(0x06be));
+            Assert.That(snapshot.LevelPercent, Is.EqualTo(64));
+            Assert.That(snapshot.State, Is.EqualTo(BatteryState.Available));
+        });
+    }
+
     [TestCase(-1)]
     [TestCase(101)]
     public void Invalid_available_level_becomes_unavailable(int level)

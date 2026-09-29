@@ -1,6 +1,8 @@
 # Headset Battery Monitor
 
-A Windows notification-area application for monitoring the HyperX Cloud II Wireless and Logitech G933 through HeadsetControl.
+A Windows notification-area application for monitoring the HyperX Cloud II Wireless, HyperX Cloud III S Wireless, and Logitech G933 through HeadsetControl.
+
+Cloud III S Wireless recognition uses the device name and USB identity reported in the upstream device request (`03f0:06be`). As of September 2026, upstream HeadsetControl does not yet list this model or its battery capability as supported, so live battery monitoring requires a HeadsetControl build that can detect the headset and return battery data. Hardware acceptance remains pending.
 
 Implementation is in progress. The application expects a pinned Windows build of `headsetcontrol.exe` beside `HeadsetBatteryMonitor.exe`; an advanced custom path will be supported for compatibility testing. HeadsetControl is not currently checked into this repository.
 
