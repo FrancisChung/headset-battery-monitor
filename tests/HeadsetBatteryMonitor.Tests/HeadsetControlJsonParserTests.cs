@@ -13,7 +13,7 @@ public sealed class HeadsetControlJsonParserTests
         const string json = """
             {
               "version": "3.0.0", "api_version": "1.5", "devices": [
-                { "status": "success", "device": "HyperX Cloud II Wireless", "id_vendor": "0x0951", "id_product": "0x1718",
+                { "status": "success", "device": "Logitech G933", "id_vendor": "0x046d", "id_product": "0x0a5b",
                   "battery": { "status": "BATTERY_AVAILABLE", "level": 72 } },
                 { "status": "success", "device": "Unrelated headset", "id_vendor": "0x0001", "id_product": "0x0002",
                   "battery": { "status": "BATTERY_AVAILABLE", "level": 99 } }
@@ -26,33 +26,25 @@ public sealed class HeadsetControlJsonParserTests
         Assert.Multiple(() =>
         {
             Assert.That(result.Devices, Has.Count.EqualTo(1));
-            Assert.That(result.Devices[0].DisplayName, Is.EqualTo("HyperX Cloud II Wireless"));
+            Assert.That(result.Devices[0].DisplayName, Is.EqualTo("Logitech G933"));
             Assert.That(result.Devices[0].LevelPercent, Is.EqualTo(72));
             Assert.That(result.BackendVersion, Is.EqualTo("3.0.0"));
             Assert.That(result.ApiVersion, Is.EqualTo("1.5"));
         });
     }
 
-    [Test]
-    public void Parses_cloud_iii_s_wireless_battery()
+    [TestCase("HyperX Cloud II Wireless")]
+    [TestCase("HyperX Cloud III S Wireless")]
+    public void Ignores_hyperx_devices_owned_by_direct_hid_source(string deviceName)
     {
-        const string json = """
+        var json = $$"""
             { "api_version": "1.5", "devices": [
-              { "status": "success", "device": "HyperX Cloud III S Wireless", "id_vendor": "0x03f0", "id_product": "0x06be",
+              { "status": "success", "device": "{{deviceName}}", "id_vendor": "0x03f0", "id_product": "0x06be",
                 "battery": { "status": "BATTERY_AVAILABLE", "level": 64 } }
             ] }
             """;
 
-        var snapshot = new HeadsetControlJsonParser().Parse(json, ObservedAt).Devices.Single();
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(snapshot.DisplayName, Is.EqualTo("HyperX Cloud III S Wireless"));
-            Assert.That(snapshot.DeviceKey.VendorId, Is.EqualTo(0x03f0));
-            Assert.That(snapshot.DeviceKey.ProductId, Is.EqualTo(0x06be));
-            Assert.That(snapshot.LevelPercent, Is.EqualTo(64));
-            Assert.That(snapshot.State, Is.EqualTo(BatteryState.Available));
-        });
+        Assert.That(new HeadsetControlJsonParser().Parse(json, ObservedAt).Devices, Is.Empty);
     }
 
     [TestCase(-1)]

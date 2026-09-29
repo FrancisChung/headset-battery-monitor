@@ -8,4 +8,5 @@ public interface IHeadsetBatterySource
 public sealed record HeadsetReadResult(
     IReadOnlyList<BatterySnapshot> Devices,
     string? BackendVersion,
-    string? ApiVersion);
+    string? ApiVersion,
+    IReadOnlyList<string>? Diagnostics = null);

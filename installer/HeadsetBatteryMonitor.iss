@@ -52,6 +52,7 @@ Name: "startmenu"; Description: "Create a Start Menu shortcut"; GroupDescription
 Source: "{#SourceDir}\HeadsetBatteryMonitor.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#HeadsetControlDir}\headsetcontrol.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\LICENSE"; DestDir: "{app}"; DestName: "HeadsetBatteryMonitor-MIT.txt"; Flags: ignoreversion
+Source: "..\THIRD_PARTY_NOTICES.md"; DestDir: "{app}\LICENSES"; Flags: ignoreversion
 Source: "{#HeadsetControlDir}\HeadsetControl-GPL-3.0.txt"; DestDir: "{app}\LICENSES"; Flags: ignoreversion
 Source: "{#HeadsetControlDir}\HeadsetControl-SOURCE.txt"; DestDir: "{app}\LICENSES"; Flags: ignoreversion
 

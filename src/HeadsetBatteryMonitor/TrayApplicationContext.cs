@@ -37,11 +37,16 @@ internal sealed class TrayApplicationContext : ApplicationContext
             var executable = string.IsNullOrWhiteSpace(_settings.HeadsetControlPath)
                 ? Path.Combine(AppContext.BaseDirectory, "headsetcontrol.exe")
                 : _settings.HeadsetControlPath;
-            var result = await new HeadsetControlCliSource(executable).ReadAsync(_shutdown.Token);
+            var source = new CompositeHeadsetBatterySource(
+                new HyperXDirectHidSource(),
+                new HeadsetControlCliSource(executable));
+            var result = await source.ReadAsync(_shutdown.Token);
             _snapshots = result.Devices;
             _backendVersion = result.BackendVersion;
             _apiVersion = result.ApiVersion;
-            _lastError = null;
+            _lastError = result.Diagnostics is { Count: > 0 }
+                ? string.Join(Environment.NewLine, result.Diagnostics)
+                : null;
         }
         catch (OperationCanceledException) when (_shutdown.IsCancellationRequested) { }
         catch (Exception exception) when (exception is IOException

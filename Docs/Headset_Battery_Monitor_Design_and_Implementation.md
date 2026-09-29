@@ -3,20 +3,20 @@
 **Date:** 28 September 2026  
 **Target:** Windows 10 x64; also test Windows 11 if available  
 **Initial devices:** HyperX Cloud II Wireless (Kingston or HP receiver) and Logitech G933 Artemis Spectrum  
-**Provisional device:** HyperX Cloud III S Wireless (`03f0:06be`), pending upstream HeadsetControl battery support and hardware verification
+**Provisional device:** HyperX Cloud III S Wireless (`03f0:06be`), using direct HID and pending hardware verification
 **Later device:** Original Plantronics RIG 800HD, subject to protocol research
 
 ## 1. Goal and scope
 
 Build a small Windows notification-area application that shows the battery status of the two supported headsets from one place. A user can leave both USB receivers plugged in, see a row for each headset, and choose which headset's battery level appears on the tray icon. The application stays responsive if a receiver is removed, a headset is powered off, or battery information is temporarily unavailable.
 
-V1 reads only battery and charging status where the underlying device supplies it. There is no need to implement raw HID commands for the two initial headsets, headset settings, audio routing, or the RIG 800HD protocol. Avoid claiming an exact percentage when a headset or backend only provides coarse levels.
+V1 reads only battery and charging status where the underlying device supplies it. HyperX battery queries use direct HID; headset settings, audio routing, and the RIG 800HD protocol remain out of scope. Avoid claiming an exact percentage when a headset or backend only provides coarse levels.
 
 **Existing alternative:** [aarol/headset-battery-indicator](https://github.com/aarol/headset-battery-indicator) already supplies a Windows tray indicator using HeadsetControl. Try it if the only goal is to use a battery indicator immediately. The plan below is for a C# app that the owner can extend and use for the later RIG work. Review the existing app's UX and behavior without copying code unless its GPLv3 license is suitable for the new project.
 
 ## 2. Verified starting point and assumptions
 
-HeadsetControl currently lists Logitech G933 and both the HP and Kingston variants of HyperX Cloud II Wireless with battery support on Windows. Its documented CLI provides structured JSON, including device name, vendor/product IDs, battery level and battery status. It also offers a C/C++ library and C API, but a separate CLI process is the simplest C# starting point. Recent HeadsetControl releases include fixes for Logitech and Cloud II battery reporting; pin and test a release that contains those fixes.
+HeadsetControl supplies Logitech G933 battery data through its documented JSON CLI. HyperX Cloud II and Cloud III S use direct HID queries derived from auto94's MIT-licensed monitor: HP Cloud II `03f0:018b`/`03f0:0696`, Kingston Cloud II `0951:1718`, and HP Cloud III S `03f0:06be`. HidSharp provides managed HID enumeration and report I/O; the Kingston receiver additionally needs the Windows `HidD_GetInputReport` handshake used by the reference implementation.
 
 The exact USB IDs and firmware of the owner's devices have **not** been confirmed. The earlier `047f:c043` identification for the RIG 800HD is a lead, not a verified ID for this owner's receiver. The RIG is deliberately not counted as supported until real hardware demonstrates a working battery read.
 
@@ -26,7 +26,7 @@ Windows 10 is the requested runtime target. Microsoft's support statement for mo
 
 **UI:** C# WinForms, `net10.0-windows`, `NotifyIcon` and context menu; no main window required. Publish self-contained for `win-x64` once it works on the target machine. If .NET 10 fails on the owner's Windows 10 build, choose a compatible runtime after a real compatibility test and document that decision.
 
-**Backend:** Bundle a pinned, tested Windows x64 `headsetcontrol.exe` beside the tray executable. Allow an advanced user-selected path for development and compatibility testing, but prefer the bundled executable in normal use. Execute the documented JSON command `headsetcontrol -o json` via `ProcessStartInfo.ArgumentList`, parse `devices[]`, validate the reported API major version, and filter to the explicitly supported Cloud II Wireless and G933 identities plus the provisional Cloud III S Wireless identity. Confirm on the pinned executable whether `-o json` retrieves battery automatically; if necessary use the documented `-b -o json` and make the choice explicit in one adapter. Do not scrape human-readable CLI text.
+**Backend:** Use a composite source. `HyperXDirectHidSource` owns supported HyperX models and sends their model-specific battery request directly to the correct HID collection. `HeadsetControlCliSource` owns G933 and future explicitly allowed non-HyperX models by executing `headsetcontrol -o json`, validating the JSON API major version, and filtering returned devices. A failure in either source is retained as a diagnostic without discarding successful readings from the other. Do not scrape human-readable CLI text.
 
 Display the detected HeadsetControl application and API versions in diagnostics. A newer backend can be tested or substituted without rebuilding the tray application when its JSON API remains compatible, but releases must continue to pin and test an exact version. Report incompatible output clearly and never silently reinterpret it. Do not implement automatic backend downloads or replacement in V1. When distributing HeadsetControl, include its GPLv3 license, attribution, corresponding-source information and any other required notices; obtain licensing advice for the intended distribution model.
 
@@ -54,7 +54,9 @@ public interface IHeadsetBatterySource
     Task<IReadOnlyList<BatterySnapshot>> ReadAsync(CancellationToken cancellationToken);
 }
 
+public sealed class HyperXDirectHidSource : IHeadsetBatterySource { /* direct HID adapter */ }
 public sealed class HeadsetControlCliSource : IHeadsetBatterySource { /* JSON adapter */ }
+public sealed class CompositeHeadsetBatterySource : IHeadsetBatterySource { /* merges sources */ }
 ```
 
 Use a small coordinator to schedule polls, reconcile the current set of supported devices and publish immutable snapshots to the WinForms UI thread. Device filtering belongs in the adapter/coordinator, not in the tray rendering code. The later RIG driver should be added upstream to HeadsetControl if practical; it can then flow through this adapter. If upstream integration is blocked, a separate `Rig800HdSource` can implement the same interface and its snapshots can be merged by the coordinator.
@@ -73,7 +75,7 @@ Use a small coordinator to schedule polls, reconcile the current set of supporte
 
 ### M0 — hardware and backend spike
 
-On the owner's Windows 10 PC, install/run a recent HeadsetControl Windows build. Record Windows edition/build, the two USB receiver IDs and backend version. With each headset powered on and off, save **redacted** outputs of `headsetcontrol -o json` and, if necessary, `headsetcontrol -b -o json`. Then test both connected at once. Confirm the JSON reports both devices and meaningful battery states. If one device fails, diagnose backend/firmware compatibility before writing a raw HID fallback. **Gate:** record what is verified versus still untested.
+On the owner's Windows 10 PC, record Windows edition/build, all receiver IDs, and the HeadsetControl version. Test each HyperX receiver through the direct HID source with the headset powered on and off. Save **redacted** HeadsetControl JSON for the G933. Then test all receivers together and with NGENUITY/G HUB both running and closed. **Gate:** record what is verified versus still untested.
 
 ### M1 — minimum working tray app
 
@@ -108,7 +110,7 @@ Automate JSON parsing, state mapping and polling/timeout behavior with fixture p
 
 ## 7. Risks and constraints
 
-- HeadsetControl reports support for these models, but the owner's firmware and USB IDs may differ. Finish M0 before committing to packaging.
+- The direct HyperX protocol and known IDs come from another implementation, but the owner's firmware and receiver revisions may differ. Finish M0 before claiming hardware acceptance.
 - A dongle can remain connected while its headset is off. Backend status takes precedence over the presence of a USB receiver.
 - Some devices only expose coarse battery levels; the tray must reflect reported precision rather than imply one-percent accuracy.
 - HID access can conflict with other software. Test with Logitech G HUB and HyperX NGENUITY running and closed; document reproducible conflicts rather than blindly killing either process.
@@ -121,7 +123,7 @@ Automate JSON parsing, state mapping and polling/timeout behavior with fixture p
 HeadsetBatteryMonitor.sln
 src/HeadsetBatteryMonitor/          # WinForms tray, coordinator, settings
 src/HeadsetBatteryMonitor.Core/     # Snapshot, status and parsing contracts
-src/HeadsetBatteryMonitor.Backends/ # HeadsetControl CLI adapter
+src/HeadsetBatteryMonitor.Backends/ # Direct HyperX HID and HeadsetControl adapters
 tests/HeadsetBatteryMonitor.Tests/  # JSON and error-state fixtures
 docs/hardware-notes.md              # Actual IDs, backend versions, observations
 docs/rig800hd-research.md           # Later only; evidence and protocol findings
@@ -137,5 +139,7 @@ LICENSES/                           # Notices and applicable third-party license
 - [HeadsetControl supported devices, Windows download, output formats and license](https://github.com/Sapd/HeadsetControl/blob/master/README.md)
 - [HeadsetControl documented JSON output, C/C++ API and C API](https://github.com/Sapd/HeadsetControl/blob/master/docs/LIBRARY_USAGE.md)
 - [HeadsetControl releases and battery fixes](https://github.com/Sapd/HeadsetControl/releases)
+- [auto94 HyperX direct-HID battery monitor](https://github.com/auto94/HyperX-Cloud-2-Battery-Monitor)
+- [HidSharp package](https://www.nuget.org/packages/HidSharp)
 - [Existing Windows tray implementation and GPLv3 license](https://github.com/aarol/headset-battery-indicator)
 - [Microsoft .NET Windows support matrix](https://learn.microsoft.com/en-us/dotnet/core/install/windows)
